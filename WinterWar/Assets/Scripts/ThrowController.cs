@@ -16,12 +16,14 @@ public class ThrowController : MonoBehaviour
         TryThrow();
     }
 
+    // 발사 속도 계산
     private void ThrowRateCalc()
     {
         if (currentThrowRate > 0)
             currentThrowRate -= Time.deltaTime;
     }
-
+    
+    // 밠
     private void TryThrow()
     {
         if (Input.GetButton("Throw") && currentThrowRate <= 0)
@@ -33,13 +35,14 @@ public class ThrowController : MonoBehaviour
     // 던지기
     private void Throw()
     {
-        currentThrowRate = currentProjectile.throwRate;
+        
         Shoot();
     }
 
     // 발사 : 실제로 투사체가 날아감
     private void Shoot()
     {
-
+        //currentProjectile
+        //currentThrowRate = currentProjectile.throwRate; // 발사 속도 재계산
     }
 }
