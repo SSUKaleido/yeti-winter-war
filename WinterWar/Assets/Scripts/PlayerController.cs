@@ -9,7 +9,11 @@ public class PlayerController : MonoBehaviour
     // 속도 변수
     [SerializeField]     // Inspector 창에서 private 확인
     private float walkSpeed;
+    [SerializeField]
     private float crouchSpeed;  // 앉았을 때 속도
+    [SerializeField]
+    private float boostSpeed;   // 부스터 사용했을 때 속도
+    private float applySpeed;   // 실제 적용 속도
 
     [SerializeField]
     private float jumpForce;
@@ -17,6 +21,9 @@ public class PlayerController : MonoBehaviour
     // 상태 변수
     private bool isGround = true;  // 땅에 있는지 없는지
     private bool isCrouch = false;
+
+    private bool isRun = false;   // 걷고 있는지
+
 
     // 앉았을 때 얼마나 앉을지 변수
     [SerializeField]
@@ -27,7 +34,12 @@ public class PlayerController : MonoBehaviour
     // 땅 착지 여부 확인;
     private BoxCollider boxCollider;
 
-    // 민감도
+    /*
+     * 아이템 관련 변수 자리
+    */
+
+
+    // 카메라 민감도
     [SerializeField]
     private float lookSensitivity;
 
@@ -61,6 +73,7 @@ public class PlayerController : MonoBehaviour
         CharacterRotation();
     }
 
+    // 앉기 시도
     private void TryCrouch()
     {
         if(Input.GetKeyDown(KeyCode.LeftControl))
@@ -69,25 +82,27 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void Crouch()   // 속도 변경 추후 수정
+    // 앉기
+    private void Crouch()
     {
         isCrouch = !isCrouch;
         if(isCrouch)
         {
-            // applySpeed = crouchSpeed;
+            applySpeed = crouchSpeed;
+            
             applyCrouchPosY = crouchPosY;
         }
         else
         {
-            // applySpeed = walkSpeed;
+            applySpeed = walkSpeed;
             applyCrouchPosY = originPosY;
         }
 
-        //mainCamera.transform.localPosition = new Vector3(mainCamera.transform.localPosition.x, applyCrouchPosY, mainCamera.transform.localPosition.z);
+        //mainCamera.transform.localPosition = new Vector3(mainCamera.transform.localPosition.x, applyCrouchPosY, mainCamera.transform.localPosition.z); 에서 변경함.
         StartCoroutine(CrouchCoroutine());
     }
 
-    IEnumerator CrouchCoroutine()   // coroutine을 만나면 코드가 병렬 처리됨. 자연스러운 카메라 처리
+    IEnumerator CrouchCoroutine()   // 앉기 시 카메라 : coroutine을 만나면 코드가 병렬 처리됨. 자세 변화 시 자연스러운 카메라 처리
     {
         float posY = mainCamera.transform.localPosition.y;
         int count = 0;
@@ -104,26 +119,27 @@ public class PlayerController : MonoBehaviour
         mainCamera.transform.localPosition = new Vector3(0, applyCrouchPosY, 0f);
     }
 
+    private void Run()   // 아이템 사용시 달리기
+    {
+        // 키입력 등등
+    }
+
     // 땅에 붙어있는지 확인
     private void IsGround()
     {
         isGround = Physics.Raycast(transform.position, Vector3.down, boxCollider.bounds.extents.y + 0.1f);   // Vector : 뒤집어져도 아래로, boxCollider 영역 y의 절반 만큼 확인
     }
 
-    // 점프 시도
+    // 점프
     private void TryJump()
     {
         if(Input.GetKeyDown(KeyCode.Space) && isGround)
         {
-            Jump();
+            if (isCrouch) Crouch(); // 점프할 때 앉기 해제
+            playerRb.velocity = transform.up * jumpForce;
         }
     }
 
-    private void Jump()
-    {
-        if(isCrouch) Crouch(); // 점프할 때 앉기 해제
-        playerRb.velocity = transform.up * jumpForce;
-    }
 
     // w, s, a, d 이동
     private void Move()
@@ -134,12 +150,15 @@ public class PlayerController : MonoBehaviour
         Vector3 moveHorizontal = transform.right* moveX;
         Vector3 moveVertical= transform.forward* moveZ;
 
-        Vector3 velocity = (moveHorizontal + moveVertical).normalized * walkSpeed;  // 벡터의 합이 1이 나오도록 함.
+        if (!isRun) applySpeed = walkSpeed;
+        else applySpeed = boostSpeed;
+
+        Vector3 velocity = (moveHorizontal + moveVertical).normalized * applySpeed;  // 벡터의 합이 1이 나오도록 함.
 
         playerRb.MovePosition(transform.position + velocity * Time.deltaTime);
     }
 
-    // 좌우 캐릭터 회전
+    // 좌우 캐릭터 회전(camera)
     private void CharacterRotation()
     {
         float yRotation = Input.GetAxisRaw("Mouse X");  // 마우스 좌우
@@ -153,7 +172,7 @@ public class PlayerController : MonoBehaviour
     {
         float xRotation = Input.GetAxisRaw("Mouse Y");  // 마우스 위아래
         float cameraRotationX = xRotation * lookSensitivity; // 카메라가 너무 확 움직이지 않도록 조절
-
+        
         currentCameraRotationX -= cameraRotationX;
         
         currentCameraRotationX = Mathf.Clamp(currentCameraRotationX, -cameraRotationLimit, cameraRotationLimit);
